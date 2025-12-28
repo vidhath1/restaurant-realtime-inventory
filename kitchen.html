@@ -3,33 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <title>Kitchen Stock</title>
+  <style>
+    .ingredient { margin-bottom: 5px; }
+    .menu { margin-top: 20px; }
+  </style>
 </head>
 <body>
   <h2>Kitchen: Enter Ingredient Stock</h2>
 
-  <div>
-    <label>Ingredient 1:</label>
-    <input type="text" id="name1" placeholder="Name">
-    <input type="number" id="qty1" placeholder="Quantity">
-  </div>
-  <div>
-    <label>Ingredient 2:</label>
-    <input type="text" id="name2" placeholder="Name">
-    <input type="number" id="qty2" placeholder="Quantity">
-  </div>
-  <div>
-    <label>Ingredient 3:</label>
-    <input type="text" id="name3" placeholder="Name">
-    <input type="number" id="qty3" placeholder="Quantity">
-  </div>
-
+  <div id="ingredientsContainer"></div>
+  <button onclick="addIngredient()">Add Ingredient</button>
+  <br><br>
   <button onclick="saveStock()">Save Stock</button>
+
+  <div class="menu">
+    <h3>Menu Items</h3>
+    <div id="menuContainer"></div>
+    <button onclick="addMenuItem()">Add Menu Item</button>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // Replace with your Firebase config
    const firebaseConfig = {
     apiKey: "AIzaSyCxnbO3nl9IzEOnkJnUYvBcjICAMaXWhHg",
     authDomain: "restaurant-realtime-b9a42.firebaseapp.com",
@@ -42,26 +38,100 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    window.saveStock = async function () {
-      const ingredients = [
-        { name: document.getElementById("name1").value.trim().toLowerCase(), qty: Number(document.getElementById("qty1").value) },
-        { name: document.getElementById("name2").value.trim().toLowerCase(), qty: Number(document.getElementById("qty2").value) },
-        { name: document.getElementById("name3").value.trim().toLowerCase(), qty: Number(document.getElementById("qty3").value) }
-      ];
+    const ingredientsContainer = document.getElementById("ingredientsContainer");
+    const menuContainer = document.getElementById("menuContainer");
 
-      const recipe = { rice: 0.25, oil: 0.05, veg: 0.20 };
-      const counts = [];
+    let ingredientCount = 0;
+    let menuCount = 0;
 
-      for (let ing of ingredients) {
-        if (!ing.name || ing.qty <= 0) continue;
-        await setDoc(doc(db, "ingredients", ing.name), { quantity: ing.qty });
-        if (recipe[ing.name]) counts.push(Math.floor(ing.qty / recipe[ing.name]));
+    function addIngredient(name = "", qty = "") {
+      ingredientCount++;
+      const div = document.createElement("div");
+      div.className = "ingredient";
+      div.id = `ingredient${ingredientCount}`;
+      div.innerHTML = `
+        Name: <input type="text" placeholder="Ingredient Name" value="${name}" /> 
+        Qty: <input type="number" placeholder="Quantity" value="${qty}" />
+        <button onclick="removeIngredient(${ingredientCount})">Remove</button>
+      `;
+      ingredientsContainer.appendChild(div);
+    }
+
+    function removeIngredient(id) {
+      const div = document.getElementById(`ingredient${id}`);
+      if(div) div.remove();
+    }
+
+    function addMenuItem(name = "", recipe = {}) {
+      menuCount++;
+      const div = document.createElement("div");
+      div.className = "menuItem";
+      div.id = `menu${menuCount}`;
+      let recipeInputs = "";
+      for(let ing in recipe){
+        recipeInputs += `${ing}: <input type="number" value="${recipe[ing]}" /> `;
+      }
+      div.innerHTML = `
+        Menu Name: <input type="text" placeholder="Menu Name" value="${name}" /> <br>
+        Recipe (ingredient: quantity required): <span class="recipeInputs">${recipeInputs}</span>
+        <button onclick="removeMenu(${menuCount})">Remove</button>
+      `;
+      menuContainer.appendChild(div);
+    }
+
+    function removeMenu(id) {
+      const div = document.getElementById(`menu${id}`);
+      if(div) div.remove();
+    }
+
+    async function saveStock() {
+      // Save ingredients to Firestore
+      const ingredientDivs = document.querySelectorAll(".ingredient");
+      const ingredientData = {};
+      ingredientDivs.forEach(div => {
+        const inputs = div.getElementsByTagName("input");
+        const name = inputs[0].value.trim().toLowerCase();
+        const qty = Number(inputs[1].value);
+        if(name && qty > 0){
+          ingredientData[name] = qty;
+        }
+      });
+
+      for(let name in ingredientData){
+        await setDoc(doc(db, "ingredients", name), { quantity: ingredientData[name] });
       }
 
-      const available = counts.length ? Math.min(...counts) : 0;
-      await setDoc(doc(db, "menu", "fried_rice"), { available });
-      alert("Stock saved successfully");
-    };
+      // Save menu items and calculate availability
+      const menuDivs = document.querySelectorAll(".menuItem");
+      for(let div of menuDivs){
+        const inputs = div.getElementsByTagName("input");
+        const menuName = inputs[0].value.trim().toLowerCase();
+        if(!menuName) continue;
+
+        // Build recipe object
+        const recipeObj = {};
+        for(let i=1;i<inputs.length;i++){
+          const ingName = Object.keys(ingredientData)[i-1] || "ingredient";
+          recipeObj[ingName] = Number(inputs[i].value);
+        }
+
+        // Calculate available
+        let available = Infinity;
+        for(let ing in recipeObj){
+          const ingQty = ingredientData[ing] || 0;
+          available = Math.min(available, Math.floor(ingQty / recipeObj[ing]));
+        }
+        available = isFinite(available) ? available : 0;
+
+        await setDoc(doc(db, "menu", menuName), { available, recipe: recipeObj });
+      }
+
+      alert("Stock and menu saved successfully!");
+    }
+
+    // Add initial ingredient and menu item for convenience
+    addIngredient();
+    addMenuItem();
   </script>
 </body>
 </html>
