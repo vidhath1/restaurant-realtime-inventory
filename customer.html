@@ -1,26 +1,40 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Live Menu</title>
+  <meta charset="UTF-8">
+  <title>Customer View</title>
 </head>
 <body>
+  <h2>Available Fried Rice</h2>
+  <p id="available">Loading...</p>
 
-<h2>Live Availability</h2>
-<h3 id="display">Loading...</h3>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-<script src="firebase.js"></script>
-<script type="module">
-  import { doc, onSnapshot } from
-  "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    // Replace with your Firebase project config
+const firebaseConfig = {
+    apiKey: "AIzaSyCxnbO3nl9IzEOnkJnUYvBcjICAMaXWhHg",
+    authDomain: "restaurant-realtime-b9a42.firebaseapp.com",
+    projectId: "restaurant-realtime-b9a42",
+    storageBucket: "restaurant-realtime-b9a42.firebasestorage.app",
+    messagingSenderId: "357031222500",
+    appId: "1:357031222500:web:54a63cc693f3f1325720f1"
+  };
 
-  onSnapshot(doc(db, "menu", "fried_rice"), snap => {
-    const available = snap.data().available;
-    document.getElementById("display").innerText =
-      available > 0
-        ? `Fried Rice Available: ${available}`
-        : "Fried Rice SOLD OUT";
-  });
-</script>
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
+    const menuRef = doc(db, "menu", "fried_rice");
+
+    onSnapshot(menuRef, (docSnap) => {
+      if (docSnap.exists()) {
+        document.getElementById("available").innerText = docSnap.data().available;
+      } else {
+        document.getElementById("available").innerText = "0";
+      }
+    });
+  </script>
 </body>
 </html>
+
