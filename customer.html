@@ -2,19 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Order Page</title>
+  <title>Customer View</title>
 </head>
 <body>
-  <h2>Place Order</h2>
-  <p>Fried Rice Available: <span id="available">Loading...</span></p>
-  <button onclick="placeOrder()">Place Order</button>
+  <h2>Available Fried Rice</h2>
+  <p id="available">Loading...</p>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     // Replace with your Firebase project config
-   const firebaseConfig = {
+  const firebaseConfig = {
     apiKey: "AIzaSyCxnbO3nl9IzEOnkJnUYvBcjICAMaXWhHg",
     authDomain: "restaurant-realtime-b9a42.firebaseapp.com",
     projectId: "restaurant-realtime-b9a42",
@@ -26,44 +25,18 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const recipe = { rice: 0.25, oil: 0.05, veg: 0.20 }; // Adjust recipe quantities
+    const menuRef = doc(db, "menu", "fried_rice");
 
-    async function updateAvailable() {
-      const menuDoc = await getDoc(doc(db, "menu", "fried_rice"));
-      const available = menuDoc.exists() ? menuDoc.data().available : 0;
-      document.getElementById("available").innerText = available;
-    }
-
-    window.placeOrder = async function() {
-      const menuRef = doc(db, "menu", "fried_rice");
-      const menuDoc = await getDoc(menuRef);
-
-      if (!menuDoc.exists() || menuDoc.data().available <= 0) {
-        alert("No stock available");
-        return;
+    onSnapshot(menuRef, (docSnap) => {
+      if (docSnap.exists()) {
+        document.getElementById("available").innerText = docSnap.data().available;
+      } else {
+        document.getElementById("available").innerText = "0";
       }
-
-      // Deduct ingredients
-      for (let ing in recipe) {
-        const ingRef = doc(db, "ingredients", ing);
-        const ingDoc = await getDoc(ingRef);
-        if (ingDoc.exists()) {
-          const qty = ingDoc.data().quantity - recipe[ing];
-          await setDoc(ingRef, { quantity: qty });
-        }
-      }
-
-      // Update menu available
-      const newAvailable = menuDoc.data().available - 1;
-      await setDoc(menuRef, { available: newAvailable });
-      alert("Order placed!");
-      updateAvailable();
-    };
-
-    // Initial load
-    updateAvailable();
+    });
   </script>
 </body>
 </html>
+
 
 
