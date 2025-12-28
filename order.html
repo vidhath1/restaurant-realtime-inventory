@@ -6,14 +6,13 @@
 </head>
 <body>
   <h2>Place Order</h2>
-  <p>Fried Rice Available: <span id="available">Loading...</span></p>
-  <button onclick="placeOrder()">Place Order</button>
+  <ul id="menuList">Loading menu...</ul>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, doc, onSnapshot, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // Replace with your Firebase project config
+    // Firebase config
     const firebaseConfig = {
     apiKey: "AIzaSyCxnbO3nl9IzEOnkJnUYvBcjICAMaXWhHg",
     authDomain: "restaurant-realtime-b9a42.firebaseapp.com",
@@ -26,24 +25,22 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const recipe = { rice: 0.25, oil: 0.05, veg: 0.20 }; // Adjust recipe quantities
+    const recipe = { rice: 0.25, oil: 0.05, veg: 0.20 }; // Adjust per recipe
 
-    async function updateAvailable() {
-      const menuDoc = await getDoc(doc(db, "menu", "fried_rice"));
-      const available = menuDoc.exists() ? menuDoc.data().available : 0;
-      document.getElementById("available").innerText = available;
-    }
+    const menuCol = collection(db, "menu");
+    const menuList = document.getElementById("menuList");
 
-    window.placeOrder = async function() {
-      const menuRef = doc(db, "menu", "fried_rice");
+    // Function to place order for a menu item
+    async function placeOrder(itemId) {
+      const menuRef = doc(db, "menu", itemId);
       const menuDoc = await getDoc(menuRef);
 
       if (!menuDoc.exists() || menuDoc.data().available <= 0) {
-        alert("No stock available");
+        alert("No stock available for " + itemId);
         return;
       }
 
-      // Deduct ingredients
+      // Deduct ingredients based on recipe
       for (let ing in recipe) {
         const ingRef = doc(db, "ingredients", ing);
         const ingDoc = await getDoc(ingRef);
@@ -56,13 +53,21 @@
       // Update menu available
       const newAvailable = menuDoc.data().available - 1;
       await setDoc(menuRef, { available: newAvailable });
-      alert("Order placed!");
-      updateAvailable();
-    };
+      alert("Order placed for " + itemId);
+    }
 
-    // Initial load
-    updateAvailable();
+    // Listen to menu collection live
+    onSnapshot(menuCol, (snapshot) => {
+      menuList.innerHTML = ""; // Clear list
+      snapshot.forEach(docSnap => {
+        const li = document.createElement("li");
+        li.innerHTML = `${docSnap.id} → Available: ${docSnap.data().available} <button onclick="placeOrder('${docSnap.id}')">Order</button>`;
+        menuList.appendChild(li);
+      });
+    });
+
+    // Make placeOrder global so buttons work
+    window.placeOrder = placeOrder;
   </script>
 </body>
 </html>
-
