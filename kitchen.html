@@ -4,22 +4,21 @@
   <meta charset="UTF-8">
   <title>Kitchen Stock</title>
   <style>
-    .ingredient { margin-bottom: 5px; }
-    .menu { margin-top: 20px; }
+    .ingredient, .menuItem { margin-bottom: 10px; }
   </style>
 </head>
 <body>
   <h2>Kitchen: Enter Ingredient Stock</h2>
 
   <div id="ingredientsContainer"></div>
-  <button onclick="addIngredient()">Add Ingredient</button>
+  <button id="addIngredientBtn">Add Ingredient</button>
   <br><br>
-  <button onclick="saveStock()">Save Stock</button>
+  <button id="saveStockBtn">Save Stock</button>
 
   <div class="menu">
     <h3>Menu Items</h3>
     <div id="menuContainer"></div>
-    <button onclick="addMenuItem()">Add Menu Item</button>
+    <button id="addMenuBtn">Add Menu Item</button>
   </div>
 
   <script type="module">
@@ -44,7 +43,8 @@
     let ingredientCount = 0;
     let menuCount = 0;
 
-    function addIngredient(name = "", qty = "") {
+    // --- Make functions global so buttons can call them ---
+    window.addIngredient = function(name = "", qty = "") {
       ingredientCount++;
       const div = document.createElement("div");
       div.className = "ingredient";
@@ -55,37 +55,39 @@
         <button onclick="removeIngredient(${ingredientCount})">Remove</button>
       `;
       ingredientsContainer.appendChild(div);
-    }
+    };
 
-    function removeIngredient(id) {
+    window.removeIngredient = function(id) {
       const div = document.getElementById(`ingredient${id}`);
       if(div) div.remove();
-    }
+    };
 
-    function addMenuItem(name = "", recipe = {}) {
+    window.addMenuItem = function(name = "", recipe = {}) {
       menuCount++;
       const div = document.createElement("div");
       div.className = "menuItem";
       div.id = `menu${menuCount}`;
+
       let recipeInputs = "";
       for(let ing in recipe){
         recipeInputs += `${ing}: <input type="number" value="${recipe[ing]}" /> `;
       }
+
       div.innerHTML = `
         Menu Name: <input type="text" placeholder="Menu Name" value="${name}" /> <br>
         Recipe (ingredient: quantity required): <span class="recipeInputs">${recipeInputs}</span>
         <button onclick="removeMenu(${menuCount})">Remove</button>
       `;
       menuContainer.appendChild(div);
-    }
+    };
 
-    function removeMenu(id) {
+    window.removeMenu = function(id) {
       const div = document.getElementById(`menu${id}`);
       if(div) div.remove();
-    }
+    };
 
-    async function saveStock() {
-      // Save ingredients to Firestore
+    window.saveStock = async function() {
+      // --- Save ingredients ---
       const ingredientDivs = document.querySelectorAll(".ingredient");
       const ingredientData = {};
       ingredientDivs.forEach(div => {
@@ -101,7 +103,7 @@
         await setDoc(doc(db, "ingredients", name), { quantity: ingredientData[name] });
       }
 
-      // Save menu items and calculate availability
+      // --- Save menu items and calculate availability ---
       const menuDivs = document.querySelectorAll(".menuItem");
       for(let div of menuDivs){
         const inputs = div.getElementsByTagName("input");
@@ -110,9 +112,14 @@
 
         // Build recipe object
         const recipeObj = {};
-        for(let i=1;i<inputs.length;i++){
-          const ingName = Object.keys(ingredientData)[i-1] || "ingredient";
-          recipeObj[ingName] = Number(inputs[i].value);
+        const recipeInputs = div.querySelector(".recipeInputs");
+        const recipeInputEls = recipeInputs ? recipeInputs.getElementsByTagName("input") : [];
+
+        let i = 0;
+        for(let ing in ingredientData){
+          const val = recipeInputEls[i] ? Number(recipeInputEls[i].value) : 0;
+          recipeObj[ing] = val;
+          i++;
         }
 
         // Calculate available
@@ -127,11 +134,17 @@
       }
 
       alert("Stock and menu saved successfully!");
-    }
+    };
 
-    // Add initial ingredient and menu item for convenience
+    // --- Event listeners for buttons ---
+    document.getElementById("addIngredientBtn").addEventListener("click", () => addIngredient());
+    document.getElementById("addMenuBtn").addEventListener("click", () => addMenuItem());
+    document.getElementById("saveStockBtn").addEventListener("click", () => saveStock());
+
+    // Add initial fields for convenience
     addIngredient();
     addMenuItem();
+
   </script>
 </body>
 </html>
