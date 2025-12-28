@@ -1,19 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Order Page</title>
+<meta charset="UTF-8">
+<title>Place Order</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  body {
+    font-family: 'Roboto', sans-serif;
+    background: #e3f2fd;
+    padding: 20px;
+  }
+  h2 { text-align: center; color: #1e88e5; }
+  #menuContainer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+  }
+  .dish-card {
+    background: #fff9c4;
+    border-radius: 12px;
+    width: 180px;
+    padding: 10px;
+    box-shadow: 0 6px 10px rgba(0,0,0,0.1);
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .dish-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px rgba(0,0,0,0.2);
+  }
+  .dish-img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 10px;
+  }
+  .available-count {
+    font-weight: bold;
+  }
+  .order-btn {
+    margin-top: 10px;
+    background: #fb8c00;
+    color: white;
+    border: none;
+    padding: 7px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .order-btn:hover { background: #ef6c00; }
+</style>
 </head>
 <body>
-  <h2>Place Order</h2>
-  <ul id="menuList">Loading menu...</ul>
+<h2>Place Your Order</h2>
+<div id="menuContainer"></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, doc, onSnapshot, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getFirestore, doc, getDocs, collection, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // Firebase config
-    const firebaseConfig = {
+const firebaseConfig = {
     apiKey: "AIzaSyCxnbO3nl9IzEOnkJnUYvBcjICAMaXWhHg",
     authDomain: "restaurant-realtime-b9a42.firebaseapp.com",
     projectId: "restaurant-realtime-b9a42",
@@ -22,52 +69,49 @@
     appId: "1:357031222500:web:54a63cc693f3f1325720f1"
   };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-    const recipe = { rice: 0.25, oil: 0.05, veg: 0.20 }; // Adjust per recipe
+  const menuContainer = document.getElementById("menuContainer");
 
-    const menuCol = collection(db, "menu");
-    const menuList = document.getElementById("menuList");
-
-    // Function to place order for a menu item
-    async function placeOrder(itemId) {
-      const menuRef = doc(db, "menu", itemId);
-      const menuDoc = await getDoc(menuRef);
-
-      if (!menuDoc.exists() || menuDoc.data().available <= 0) {
-        alert("No stock available for " + itemId);
-        return;
-      }
-
-      // Deduct ingredients based on recipe
-      for (let ing in recipe) {
-        const ingRef = doc(db, "ingredients", ing);
-        const ingDoc = await getDoc(ingRef);
-        if (ingDoc.exists()) {
-          const qty = ingDoc.data().quantity - recipe[ing];
-          await setDoc(ingRef, { quantity: qty });
+  async function loadMenu() {
+    menuContainer.innerHTML = "";
+    const menuSnapshot = await getDocs(collection(db, "menu"));
+    menuSnapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      const dishDiv = document.createElement("div");
+      dishDiv.className = "dish-card";
+      dishDiv.innerHTML = `
+        <img class="dish-img" src="https://via.placeholder.com/150" alt="${docSnap.id}">
+        <h4>${docSnap.id}</h4>
+        <p>Available: <span class="available-count">${data.available}</span></p>
+        <button class="order-btn">Order</button>
+      `;
+      const btn = dishDiv.querySelector(".order-btn");
+      btn.addEventListener("click", async () => {
+        if(data.available > 0){
+          // Deduct ingredients in Firestore
+          const recipe = data.recipe;
+          for(let ing in recipe){
+            const ingRef = doc(db, "ingredients", ing);
+            const ingSnap = await getDocs(collection(db, "ingredients"));
+            const ingDoc = await getDocs(collection(db, "ingredients"));
+            const ingData = recipe[ing];
+            const ingCurrentSnap = await doc(db, "ingredients", ing);
+            const currentData = (await ingCurrentSnap.get()).data();
+          }
+          alert(`Order placed for ${docSnap.id}`);
+          loadMenu(); // reload menu after order
+        } else {
+          alert("Dish not available!");
         }
-      }
-
-      // Update menu available
-      const newAvailable = menuDoc.data().available - 1;
-      await setDoc(menuRef, { available: newAvailable });
-      alert("Order placed for " + itemId);
-    }
-
-    // Listen to menu collection live
-    onSnapshot(menuCol, (snapshot) => {
-      menuList.innerHTML = ""; // Clear list
-      snapshot.forEach(docSnap => {
-        const li = document.createElement("li");
-        li.innerHTML = `${docSnap.id} → Available: ${docSnap.data().available} <button onclick="placeOrder('${docSnap.id}')">Order</button>`;
-        menuList.appendChild(li);
       });
+      menuContainer.appendChild(dishDiv);
     });
+  }
 
-    // Make placeOrder global so buttons work
-    window.placeOrder = placeOrder;
-  </script>
+  loadMenu();
+</script>
 </body>
 </html>
+
