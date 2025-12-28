@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Front Desk</title>
+</head>
+<body>
+
+<h2>Front Desk – Orders</h2>
+<h3 id="status">Loading...</h3>
+<button onclick="placeOrder()">Place Order</button>
+
+<script src="firebase.js"></script>
+<script type="module">
+  import {
+    doc, onSnapshot, getDoc, updateDoc
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  const recipe = {
+    rice: 0.25,
+    oil: 0.05,
+    veg: 0.20
+  };
+
+  const menuRef = doc(db, "menu", "fried_rice");
+  let available = 0;
+
+  onSnapshot(menuRef, snap => {
+    available = snap.data().available;
+    document.getElementById("status").innerText =
+      "Fried Rice Available: " + available;
+  });
+
+  window.placeOrder = async function () {
+    if (available <= 0) {
+      alert("SOLD OUT");
+      return;
+    }
+
+    for (let ing in recipe) {
+      const ref = doc(db, "ingredients", ing);
+      const snap = await getDoc(ref);
+      await updateDoc(ref, {
+        quantity: snap.data().quantity - recipe[ing]
+      });
+    }
+
+    await updateDoc(menuRef, {
+      available: available - 1
+    });
+  };
+</script>
+
+</body>
+</html>
