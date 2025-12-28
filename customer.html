@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Live Menu</title>
+</head>
+<body>
+
+<h2>Live Availability</h2>
+<h3 id="display">Loading...</h3>
+
+<script src="firebase.js"></script>
+<script type="module">
+  import { doc, onSnapshot } from
+  "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  onSnapshot(doc(db, "menu", "fried_rice"), snap => {
+    const available = snap.data().available;
+    document.getElementById("display").innerText =
+      available > 0
+        ? `Fried Rice Available: ${available}`
+        : "Fried Rice SOLD OUT";
+  });
+</script>
+
+</body>
+</html>
