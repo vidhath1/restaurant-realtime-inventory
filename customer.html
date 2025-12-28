@@ -5,15 +5,14 @@
   <title>Customer View</title>
 </head>
 <body>
-  <h2>Available Fried Rice</h2>
-  <p id="available">Loading...</p>
+  <h2>Menu Availability</h2>
+  <ul id="menuList">Loading menu...</ul>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // Replace with your Firebase project config
-  const firebaseConfig = {
+    const firebaseConfig = {
     apiKey: "AIzaSyCxnbO3nl9IzEOnkJnUYvBcjICAMaXWhHg",
     authDomain: "restaurant-realtime-b9a42.firebaseapp.com",
     projectId: "restaurant-realtime-b9a42",
@@ -25,18 +24,22 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const menuRef = doc(db, "menu", "fried_rice");
+    const menuCol = collection(db, "menu");
+    const menuList = document.getElementById("menuList");
 
-    onSnapshot(menuRef, (docSnap) => {
-      if (docSnap.exists()) {
-        document.getElementById("available").innerText = docSnap.data().available;
-      } else {
-        document.getElementById("available").innerText = "0";
-      }
+    // Listen live to menu collection
+    onSnapshot(menuCol, (snapshot) => {
+      menuList.innerHTML = "";
+      snapshot.forEach(docSnap => {
+        const li = document.createElement("li");
+        li.innerText = `${docSnap.id} → Available: ${docSnap.data().available}`;
+        menuList.appendChild(li);
+      });
     });
   </script>
 </body>
 </html>
+
 
 
 
