@@ -1,18 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Customer View</title>
+<meta charset="UTF-8">
+<title>Customer Menu</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  body {
+    font-family: 'Roboto', sans-serif;
+    background: #fff3e0;
+    padding: 20px;
+  }
+  h2 { text-align: center; color: #f4511e; }
+  #menuContainer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+  }
+  .dish-card {
+    background: #ffe0b2;
+    border-radius: 12px;
+    width: 180px;
+    padding: 10px;
+    box-shadow: 0 6px 10px rgba(0,0,0,0.1);
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .dish-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px rgba(0,0,0,0.2);
+  }
+  .dish-img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 10px;
+  }
+  .available-count {
+    font-weight: bold;
+    color: #1b5e20;
+  }
+  .order-btn {
+    margin-top: 10px;
+    background: #43a047;
+    color: white;
+    border: none;
+    padding: 7px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .order-btn:hover { background: #2e7d32; }
+</style>
 </head>
 <body>
-  <h2>Menu Availability</h2>
-  <ul id="menuList">Loading menu...</ul>
+<h2>Customer Menu</h2>
+<div id="menuContainer"></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, getDocs, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const firebaseConfig = {
+const firebaseConfig = {
     apiKey: "AIzaSyCxnbO3nl9IzEOnkJnUYvBcjICAMaXWhHg",
     authDomain: "restaurant-realtime-b9a42.firebaseapp.com",
     projectId: "restaurant-realtime-b9a42",
@@ -21,24 +70,45 @@
     appId: "1:357031222500:web:54a63cc693f3f1325720f1"
   };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-    const menuCol = collection(db, "menu");
-    const menuList = document.getElementById("menuList");
+const menuContainer = document.getElementById("menuContainer");
 
-    // Listen live to menu collection
-    onSnapshot(menuCol, (snapshot) => {
-      menuList.innerHTML = "";
-      snapshot.forEach(docSnap => {
-        const li = document.createElement("li");
-        li.innerText = `${docSnap.id} → Available: ${docSnap.data().available}`;
-        menuList.appendChild(li);
-      });
+// Function to display menu items
+function displayMenu(menuData) {
+  menuContainer.innerHTML = "";
+  menuData.forEach(docSnap => {
+    const data = docSnap.data();
+    const dishDiv = document.createElement("div");
+    dishDiv.className = "dish-card";
+    dishDiv.innerHTML = `
+      <img class="dish-img" src="https://via.placeholder.com/150" alt="${docSnap.id}">
+      <h4>${docSnap.id}</h4>
+      <p>Available: <span class="available-count">${data.available}</span></p>
+      <button class="order-btn">Order</button>
+    `;
+    const btn = dishDiv.querySelector(".order-btn");
+    btn.addEventListener("click", () => {
+      if(data.available > 0){
+        alert(`You selected ${docSnap.id}`);
+      } else {
+        alert("Dish not available!");
+      }
     });
-  </script>
+    menuContainer.appendChild(dishDiv);
+  });
+}
+
+// Real-time listener for menu collection
+const menuCol = collection(db, "menu");
+onSnapshot(menuCol, snapshot => {
+  displayMenu(snapshot.docs);
+});
+</script>
 </body>
 </html>
+
 
 
 
