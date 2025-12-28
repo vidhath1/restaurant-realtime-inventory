@@ -1,54 +1,68 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Front Desk</title>
+  <meta charset="UTF-8">
+  <title>Order Page</title>
 </head>
 <body>
+  <h2>Place Order</h2>
+  <p>Fried Rice Available: <span id="available">Loading...</span></p>
+  <button onclick="placeOrder()">Place Order</button>
 
-<h2>Front Desk – Orders</h2>
-<h3 id="status">Loading...</h3>
-<button onclick="placeOrder()">Place Order</button>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-<script src="firebase.js"></script>
-<script type="module">
-  import {
-    doc, onSnapshot, getDoc, updateDoc
-  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-  const recipe = {
-    rice: 0.25,
-    oil: 0.05,
-    veg: 0.20
+    // Replace with your Firebase project config
+    const firebaseConfig = {
+    apiKey: "AIzaSyCxnbO3nl9IzEOnkJnUYvBcjICAMaXWhHg",
+    authDomain: "restaurant-realtime-b9a42.firebaseapp.com",
+    projectId: "restaurant-realtime-b9a42",
+    storageBucket: "restaurant-realtime-b9a42.firebasestorage.app",
+    messagingSenderId: "357031222500",
+    appId: "1:357031222500:web:54a63cc693f3f1325720f1"
   };
 
-  const menuRef = doc(db, "menu", "fried_rice");
-  let available = 0;
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-  onSnapshot(menuRef, snap => {
-    available = snap.data().available;
-    document.getElementById("status").innerText =
-      "Fried Rice Available: " + available;
-  });
+    const recipe = { rice: 0.25, oil: 0.05, veg: 0.20 }; // Adjust recipe quantities
 
-  window.placeOrder = async function () {
-    if (available <= 0) {
-      alert("SOLD OUT");
-      return;
+    async function updateAvailable() {
+      const menuDoc = await getDoc(doc(db, "menu", "fried_rice"));
+      const available = menuDoc.exists() ? menuDoc.data().available : 0;
+      document.getElementById("available").innerText = available;
     }
 
-    for (let ing in recipe) {
-      const ref = doc(db, "ingredients", ing);
-      const snap = await getDoc(ref);
-      await updateDoc(ref, {
-        quantity: snap.data().quantity - recipe[ing]
-      });
-    }
+    window.placeOrder = async function() {
+      const menuRef = doc(db, "menu", "fried_rice");
+      const menuDoc = await getDoc(menuRef);
 
-    await updateDoc(menuRef, {
-      available: available - 1
-    });
-  };
-</script>
+      if (!menuDoc.exists() || menuDoc.data().available <= 0) {
+        alert("No stock available");
+        return;
+      }
 
+      // Deduct ingredients
+      for (let ing in recipe) {
+        const ingRef = doc(db, "ingredients", ing);
+        const ingDoc = await getDoc(ingRef);
+        if (ingDoc.exists()) {
+          const qty = ingDoc.data().quantity - recipe[ing];
+          await setDoc(ingRef, { quantity: qty });
+        }
+      }
+
+      // Update menu available
+      const newAvailable = menuDoc.data().available - 1;
+      await setDoc(menuRef, { available: newAvailable });
+      alert("Order placed!");
+      updateAvailable();
+    };
+
+    // Initial load
+    updateAvailable();
+  </script>
 </body>
 </html>
+
