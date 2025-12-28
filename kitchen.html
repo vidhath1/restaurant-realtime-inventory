@@ -1,71 +1,38 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Kitchen</title>
-</head>
-<body>
-
-<h2>Kitchen – Ingredient Input</h2>
-
-<div>
-  Ingredient 1:
-  <input id="name1" placeholder="Ingredient name">
-  <input id="qty1" type="number" step="0.01" placeholder="Quantity (kg)">
-</div><br>
-
-<div>
-  Ingredient 2:
-  <input id="name2" placeholder="Ingredient name">
-  <input id="qty2" type="number" step="0.01" placeholder="Quantity (kg)">
-</div><br>
-
-<div>
-  Ingredient 3:
-  <input id="name3" placeholder="Ingredient name">
-  <input id="qty3" type="number" step="0.01" placeholder="Quantity (kg)">
-</div><br>
-
-<button onclick="saveStock()">Save Stock</button>
-
-<script src="firebase.js"></script>
 <script type="module">
-  import { doc, setDoc } from
-  "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  // Recipe for ONE Fried Rice
-  const recipe = {
-    rice: 0.25,
-    oil: 0.05,
-    veg: 0.20
+  // Replace with your Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyCxnbO3nl9IzEOnkJnUYvBcjICAMaXWhHg",
+    authDomain: "restaurant-realtime-b9a42.firebaseapp.com",
+    projectId: "restaurant-realtime-b9a42",
+    storageBucket: "restaurant-realtime-b9a42.firebasestorage.app",
+    messagingSenderId: "357031222500",
+    appId: "1:357031222500:web:54a63cc693f3f1325720f1"
   };
 
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
   window.saveStock = async function () {
-    let counts = [];
+    const ingredients = [
+      { name: document.getElementById("name1").value.trim().toLowerCase(), qty: Number(document.getElementById("qty1").value) },
+      { name: document.getElementById("name2").value.trim().toLowerCase(), qty: Number(document.getElementById("qty2").value) },
+      { name: document.getElementById("name3").value.trim().toLowerCase(), qty: Number(document.getElementById("qty3").value) }
+    ];
 
-    for (let i = 1; i <= 3; i++) {
-      const name = document.getElementById("name" + i).value.trim().toLowerCase();
-      const qty = Number(document.getElementById("qty" + i).value);
+    const recipe = { rice: 0.25, oil: 0.05, veg: 0.20 };
+    const counts = [];
 
-      if (!name || qty <= 0) continue;
-
-      await setDoc(doc(db, "ingredients", name), {
-        quantity: qty
-      });
-
-      if (recipe[name]) {
-        counts.push(Math.floor(qty / recipe[name]));
-      }
+    for (let ing of ingredients) {
+      if (!ing.name || ing.qty <= 0) continue;
+      await setDoc(doc(db, "ingredients", ing.name), { quantity: ing.qty });
+      if (recipe[ing.name]) counts.push(Math.floor(ing.qty / recipe[ing.name]));
     }
 
     const available = counts.length ? Math.min(...counts) : 0;
-
-    await setDoc(doc(db, "menu", "fried_rice"), {
-      available: available
-    });
-
+    await setDoc(doc(db, "menu", "fried_rice"), { available });
     alert("Stock saved successfully");
   };
 </script>
-
-</body>
-</html>
